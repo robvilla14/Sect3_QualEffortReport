@@ -3,35 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Section 3 Contractor Hours Dashboard</title>
-	<!-- Chart.js (unchanged) -->
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-
-	<!-- jsPDF v2 + AutoTable plugin -->
-	<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-	<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
-
-	<!-- html2canvas (unchanged) -->
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-	<!-- Chart.js DataLabels plugin — renders values inside/on chart elements -->
-	<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-
+    <title>Section 3 Quarterly Effort Report</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <style>
         /*
-         * Snow Solitude UI Chrome
-         *   #4A5D6D  dark slate  -- headers, primary buttons, main text
-         *   #607890  mid slate   -- secondary accents, table headers
-         *   #8A9BB0  steel       -- muted labels, dividers
-         *   #C0CEDC  frost       -- borders
-         *   #E4EAF2  snow        -- subtle background tints
-         *
-         * Chart Data Palette (vibrant blues, independent of UI chrome)
-         *   #C0D8EC  pale blue   -- Regular workers (recedes)
-         *   #89B8D8  light blue  -- accent
-         *   #5090BE  mid blue    -- accent
-         *   #2E6B9E  strong blue -- Section 3 workers (pops)
-         *   #1E4976  deep navy   -- Section 3 Targeted
+         * Snow Solitude palette — matches Section 3 Hours Dashboard
+         *   #4A5D6D  dark slate  — headers, primary chrome
+         *   #607890  mid slate   — secondary accents
+         *   #8A9BB0  steel       — muted labels
+         *   #C0CEDC  frost       — borders
+         *   #E4EAF2  snow        — subtle backgrounds
+         *   #2E6B9E  chart blue  — interactive focus, key values
          */
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -44,1097 +27,971 @@
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1100px;
             margin: 0 auto;
-            background: rgba(255, 255, 255, 0.98);
+            background: rgba(255,255,255,0.98);
             border-radius: 20px;
-            padding: 30px;
+            padding: 32px;
             box-shadow: 0 20px 40px rgba(30,40,50,0.18);
         }
 
-        .header { text-align: center; margin-bottom: 30px; }
-        .header h1 { font-size: 2.5em; color: #4A5D6D; margin-bottom: 10px; font-weight: 700; }
-        .header p { color: #8A9BB0; font-size: 1.1em; }
-
-        .project-info {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 16px rgba(74,93,109,0.08);
-            border: 1px solid #C0CEDC;
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 20px;
+        /* ── Header ── */
+        .header { text-align: center; margin-bottom: 28px; }
+        .header h1 { font-size: 2.1em; color: #4A5D6D; font-weight: 700; margin-bottom: 6px; }
+        .header .subtitle { color: #8A9BB0; font-size: 1em; }
+        .hud-badge {
+            display: inline-block; margin-top: 10px;
+            font-size: 11px; color: #607890;
+            background: #E4EAF2; border: 1px solid #C0CEDC;
+            border-radius: 4px; padding: 3px 12px; letter-spacing: 0.03em;
         }
 
-        .project-field { display: flex; flex-direction: column; }
-        .project-field label { font-weight: 600; color: #4A5D6D; margin-bottom: 8px; font-size: 14px; }
-        .project-field input {
-            padding: 12px 15px;
-            border: 2px solid #C0CEDC;
-            border-radius: 8px;
-            font-size: 14px;
-            color: #4A5D6D;
-            transition: all 0.3s ease;
+        /* ── Section cards ── */
+        .section-card {
+            background: white; border-radius: 14px; padding: 24px;
+            margin-bottom: 22px; border: 1px solid #C0CEDC;
+            box-shadow: 0 4px 16px rgba(74,93,109,0.07);
+            position: relative; overflow: hidden;
         }
-        .project-field input:focus {
-            outline: none;
-            border-color: #2E6B9E;
-            box-shadow: 0 0 0 3px rgba(46,107,158,0.12);
-        }
-
-        .data-section {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 16px rgba(74,93,109,0.08);
-            border: 1px solid #C0CEDC;
-        }
-
-        .section-title {
-            font-size: 1.4em;
-            color: #4A5D6D;
-            margin-bottom: 20px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-        }
-        .section-title::before {
-            content: '';
-            width: 4px;
-            height: 24px;
-            background: linear-gradient(180deg, #4A5D6D, #8A9BB0);
-            margin-right: 12px;
-            border-radius: 2px;
-        }
-
-        .input-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px; }
-        .input-table th {
-            background: linear-gradient(135deg, #4A5D6D, #607890);
-            color: white;
-            padding: 15px 10px;
-            text-align: left;
-            font-weight: 600;
-        }
-        .input-table th:first-child { border-radius: 8px 0 0 0; }
-        .input-table th:last-child  { border-radius: 0 8px 0 0; }
-        .input-table td { padding: 12px 10px; border-bottom: 1px solid #E4EAF2; color: #4A5D6D; }
-        .input-table tr:hover { background: #F4F6F9; transform: scale(1.01); transition: all 0.2s ease; }
-        .input-table input {
-            width: 100%;
-            padding: 8px 12px;
-            border: 2px solid #C0CEDC;
-            border-radius: 6px;
-            font-size: 13px;
-            color: #4A5D6D;
-            transition: all 0.3s ease;
-        }
-        .input-table input:focus {
-            outline: none;
-            border-color: #2E6B9E;
-            box-shadow: 0 0 0 3px rgba(46,107,158,0.12);
-        }
-        .input-table input.warning { border-color: #ffc107; background-color: #fff3cd; }
-        .input-table input.error   { border-color: #dc3545; background-color: #f8d7da; }
-
-        .btn {
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-right: 10px;
-            margin-bottom: 10px;
-        }
-
-        .add-row-btn {
-            background: linear-gradient(135deg, #4A5D6D, #607890);
-            color: white;
-            box-shadow: 0 4px 15px rgba(74,93,109,0.30);
-        }
-        .add-row-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(74,93,109,0.40); }
-
-        .export-csv-btn {
-            background: linear-gradient(135deg, #607890, #8A9BB0);
-            color: white;
-            box-shadow: 0 4px 15px rgba(96,120,144,0.30);
-        }
-        .export-csv-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(96,120,144,0.40); }
-
-        .export-pdf-btn {
-            background: linear-gradient(135deg, #2E6B9E, #4A5D6D);
-            color: white;
-            box-shadow: 0 4px 15px rgba(46,107,158,0.30);
-        }
-        .export-pdf-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(46,107,158,0.40); }
-
-        .export-loading { background: #8A9BB0 !important; cursor: not-allowed !important; transform: none !important; }
-
-        .compliance-info {
-            background: #EEF1F5;
-            border: 1px solid #C0CEDC;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            font-size: 14px;
-            color: #4A5D6D;
-        }
-        .compliance-info strong { display: block; margin-bottom: 5px; color: #4A5D6D; }
-
-        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px; }
-
-        .chart-container {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 4px 16px rgba(74,93,109,0.08);
-            border: 1px solid #C0CEDC;
-            position: relative;
-            overflow: hidden;
-        }
-        .chart-container::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 4px;
+        .section-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
             background: linear-gradient(90deg, #4A5D6D, #8A9BB0);
         }
 
-        .chart-title { font-size: 1.3em; color: #4A5D6D; margin-bottom: 20px; font-weight: 600; text-align: center; }
-
-        .chart-wrapper { position: relative; height: 300px; margin-bottom: 20px; }
-        .full-width-chart { grid-column: 1 / -1; }
-        .full-width-chart .chart-wrapper { height: 400px; }
-
-        .summary-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 30px; }
-
-        .stat-card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 4px 16px rgba(74,93,109,0.07);
-            border: 1px solid #C0CEDC;
-            transition: all 0.3s ease;
+        .section-title {
+            font-size: 1.1em; color: #4A5D6D; font-weight: 600;
+            margin-bottom: 18px; display: flex; align-items: center; gap: 10px;
         }
-        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(74,93,109,0.12); }
-        .stat-card.compliant     { border-left: 4px solid #28a745; }
-        .stat-card.non-compliant { border-left: 4px solid #dc3545; }
+        .title-icon {
+            width: 30px; height: 30px; background: #E4EAF2; border: 1px solid #C0CEDC;
+            border-radius: 7px; display: flex; align-items: center; justify-content: center;
+            font-size: 15px; flex-shrink: 0;
+        }
 
-        .stat-value { font-size: 2.2em; font-weight: 700; color: #2E6B9E; margin-bottom: 5px; }
-        .stat-value.compliant     { color: #28a745; }
-        .stat-value.non-compliant { color: #dc3545; }
-        .stat-label { color: #8A9BB0; font-size: 0.95em; font-weight: 500; }
+        /* ── Grid helpers ── */
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; }
+        .col-span-2 { grid-column: span 2; }
+        .col-span-3 { grid-column: span 3; }
+
+        /* ── Form fields ── */
+        .field { display: flex; flex-direction: column; gap: 5px; }
+        .field label { font-size: 12px; font-weight: 600; color: #4A5D6D; }
+        .field input, .field select, .field textarea {
+            padding: 10px 13px; border: 2px solid #C0CEDC; border-radius: 8px;
+            font-size: 13px; color: #4A5D6D; font-family: inherit;
+            transition: all 0.2s ease; background: white;
+        }
+        .field input:focus, .field select:focus, .field textarea:focus {
+            outline: none; border-color: #2E6B9E;
+            box-shadow: 0 0 0 3px rgba(46,107,158,0.11);
+        }
+        .field textarea { resize: vertical; min-height: 68px; }
+
+        .date-range { display: flex; gap: 8px; align-items: center; }
+        .date-range input { flex: 1; }
+        .date-sep { font-size: 12px; color: #8A9BB0; white-space: nowrap; }
+
+        /* ── Quarter chips ── */
+        .quarter-chips { display: flex; gap: 6px; }
+        .q-chip {
+            flex: 1; padding: 10px 6px; border: 2px solid #C0CEDC; border-radius: 8px;
+            background: white; color: #8A9BB0; font-size: 13px; font-weight: 600;
+            cursor: pointer; text-align: center; transition: all 0.2s ease; user-select: none;
+        }
+        .q-chip:hover { border-color: #2E6B9E; color: #2E6B9E; }
+        .q-chip.active { background: #2E6B9E; border-color: #2E6B9E; color: white; }
+
+        .divider { height: 1px; background: #E4EAF2; margin: 18px 0; }
+
+        /* ── Efforts ── */
+        .effort-category { margin-bottom: 22px; }
+        .effort-category:last-child { margin-bottom: 0; }
+
+        .cat-header {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 10px; padding-bottom: 9px; border-bottom: 2px solid #E4EAF2;
+        }
+        .cat-badge {
+            background: #4A5D6D; color: white; font-size: 11px; font-weight: 700;
+            padding: 3px 9px; border-radius: 20px; letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .cat-title { font-size: 13px; font-weight: 600; color: #607890; }
+        .cat-count { margin-left: auto; font-size: 12px; color: #8A9BB0; }
+
+        .efforts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+        /* Individual effort card */
+        .effort-item {
+            border: 2px solid #C0CEDC; border-radius: 10px;
+            overflow: hidden; transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .effort-item.checked {
+            border-color: #2E6B9E;
+            box-shadow: 0 2px 10px rgba(46,107,158,0.13);
+        }
+        .effort-header {
+            display: flex; align-items: flex-start; gap: 11px;
+            padding: 11px 13px; cursor: pointer; user-select: none;
+        }
+        .effort-header:hover { background: #E4EAF2; }
+        .effort-item.checked .effort-header { background: rgba(46,107,158,0.05); }
+
+        .effort-cb {
+            width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px;
+            accent-color: #2E6B9E; cursor: pointer;
+        }
+        .effort-text {
+            font-size: 12.5px; color: #4A5D6D; line-height: 1.5; flex: 1;
+        }
+        .effort-item.checked .effort-text { font-weight: 500; }
+
+        /* Sliding notes area */
+        .notes-wrap { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+        .notes-wrap.open { max-height: 180px; }
+        .notes-inner { padding: 0 13px 11px 42px; border-top: 1px solid #E4EAF2; }
+        .notes-lbl {
+            font-size: 10px; font-weight: 700; color: #8A9BB0;
+            text-transform: uppercase; letter-spacing: 0.06em;
+            margin: 9px 0 5px;
+        }
+        .notes-inner textarea {
+            width: 100%; border: 1.5px solid #C0CEDC; border-radius: 6px;
+            padding: 7px 9px; font-size: 12px; color: #4A5D6D; font-family: inherit;
+            resize: vertical; min-height: 56px; background: white;
+        }
+        .notes-inner textarea:focus {
+            outline: none; border-color: #2E6B9E;
+            box-shadow: 0 0 0 2px rgba(46,107,158,0.10);
+        }
+
+        /* Other field */
+        .other-box {
+            border: 2px solid #C0CEDC; border-radius: 10px; padding: 14px;
+            grid-column: 1 / -1;
+        }
+        .other-box label {
+            display: block; font-size: 12.5px; font-weight: 600;
+            color: #4A5D6D; margin-bottom: 8px;
+        }
+        .other-box textarea {
+            width: 100%; border: 1.5px solid #C0CEDC; border-radius: 7px;
+            padding: 9px 11px; font-size: 13px; color: #4A5D6D; font-family: inherit;
+            resize: vertical; min-height: 80px;
+        }
+        .other-box textarea:focus {
+            outline: none; border-color: #2E6B9E;
+            box-shadow: 0 0 0 3px rgba(46,107,158,0.11);
+        }
+
+        /* Checked badge */
+        .checked-badge {
+            margin-left: auto; background: #2E6B9E; color: white;
+            border-radius: 20px; padding: 2px 9px;
+            font-size: 11px; font-weight: 600;
+        }
+
+        /* ── Labor hours ── */
+        .hours-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+        .rates-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+        .rate-card {
+            border: 1.5px solid #C0CEDC; border-radius: 10px;
+            padding: 16px; text-align: center; transition: all 0.2s ease;
+        }
+        .rate-card.pass { border-color: #28a745; background: rgba(40,167,69,0.04); }
+        .rate-card.fail { border-color: #dc3545; background: rgba(220,53,69,0.04); }
+        .rate-lbl { font-size: 12px; color: #8A9BB0; margin-bottom: 6px; font-weight: 500; }
+        .rate-val { font-size: 2em; font-weight: 700; color: #2E6B9E; }
+        .rate-val.pass { color: #28a745; }
+        .rate-val.fail { color: #dc3545; }
+        .rate-thresh { font-size: 11px; color: #8A9BB0; margin-top: 3px; }
+        .rate-status {
+            display: none; margin-top: 7px; font-size: 11px; font-weight: 600;
+            padding: 2px 9px; border-radius: 20px;
+        }
+        .rate-status.pass { display: inline-block; background: rgba(40,167,69,0.12); color: #28a745; }
+        .rate-status.fail { display: inline-block; background: rgba(220,53,69,0.12); color: #dc3545; }
+
+        .hours-note {
+            margin-top: 14px; padding: 10px 14px;
+            background: #E4EAF2; border: 1px solid #C0CEDC; border-radius: 8px;
+            font-size: 12px; color: #607890;
+        }
+
+        /* ── Certification ── */
+        .cert-statement {
+            background: #E4EAF2; border: 1px solid #C0CEDC;
+            border-left: 4px solid #4A5D6D; border-radius: 8px;
+            padding: 15px 18px; font-size: 13px; color: #4A5D6D;
+            line-height: 1.65; margin-bottom: 18px; font-style: italic;
+        }
+
+        /* ── Buttons ── */
+        .actions { display: flex; gap: 10px; flex-wrap: wrap; padding-top: 4px; }
+        .btn {
+            border: none; padding: 12px 26px; border-radius: 9px;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            transition: all 0.25s ease; font-family: inherit;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #2E6B9E, #4A5D6D); color: white;
+            box-shadow: 0 4px 14px rgba(46,107,158,0.30);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(46,107,158,0.40); }
+        .btn-secondary {
+            background: linear-gradient(135deg, #607890, #8A9BB0); color: white;
+            box-shadow: 0 4px 14px rgba(96,120,144,0.25);
+        }
+        .btn-secondary:hover { transform: translateY(-2px); }
+        .btn-ghost {
+            background: white; color: #607890; border: 2px solid #C0CEDC;
+        }
+        .btn-ghost:hover { border-color: #8A9BB0; color: #4A5D6D; }
+
+        /* ── Progress overlay ── */
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.50); z-index: 999;
+            display: none; align-items: center; justify-content: center;
+        }
+        .overlay.visible { display: flex; }
+        .progress-box {
+            background: white; border-radius: 16px; padding: 32px 36px;
+            text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.30);
+        }
+        .spinner {
+            border: 4px solid #E4EAF2; border-top: 4px solid #2E6B9E;
+            border-radius: 50%; width: 42px; height: 42px;
+            animation: spin 1s linear infinite; margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .progress-box h3 { color: #4A5D6D; margin-bottom: 5px; }
+        .progress-box p  { color: #8A9BB0; font-size: 13px; }
 
         @media (max-width: 768px) {
-            .project-info  { grid-template-columns: 1fr; }
-            .charts-grid   { grid-template-columns: 1fr; }
-            .input-table   { font-size: 12px; }
-            .input-table th, .input-table td { padding: 8px 5px; }
-        }
-
-        .pdf-progress {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: white; padding: 30px; border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-            z-index: 1000; text-align: center; min-width: 300px;
-        }
-        .pdf-progress-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 999;
-        }
-
-        .spinner {
-            border: 4px solid #E4EAF2;
-            border-top: 4px solid #2E6B9E;
-            border-radius: 50%;
-            width: 40px; height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        @media print {
-            .container { max-width: none; margin: 0; padding: 20px; box-shadow: none; background: white; }
-            .charts-grid { page-break-inside: avoid; }
-            .chart-container { page-break-inside: avoid; margin-bottom: 20px; }
-            .full-width-chart { page-break-before: always; }
-            input[type="text"], input[type="number"], input[type="date"] {
-                border: 1px solid #C0CEDC !important; background: white !important;
-                color: #4A5D6D !important; font-size: 14px !important;
-                padding: 8px !important; -webkit-appearance: none !important;
-            }
+            .grid-3, .grid-4, .grid-2 { grid-template-columns: 1fr; }
+            .hours-grid, .rates-grid   { grid-template-columns: 1fr; }
+            .efforts-grid              { grid-template-columns: 1fr; }
+            .col-span-2, .col-span-3  { grid-column: span 1; }
+            .actions { flex-direction: column; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Section 3 Contractor Hours Dashboard</h1>
-            <p>Track contractor compliance with Section 3 worker hour requirements</p>
+
+<div class="overlay" id="overlay">
+    <div class="progress-box">
+        <div class="spinner"></div>
+        <h3>Generating PDF</h3>
+        <p>Preparing your compliance report...</p>
+    </div>
+</div>
+
+<div class="container">
+
+    <!-- ── Header ── -->
+    <div class="header">
+        <h1>Section 3 Quarterly Effort Report</h1>
+        <p class="subtitle">Documentation of qualitative compliance efforts — greatest extent feasible</p>
+        <span class="hud-badge">24 CFR Part 75 — Section 3 HUD Quarterly Reporting</span>
+    </div>
+
+    <!-- ── Section 1: Project & Contractor Info ── -->
+    <div class="section-card">
+        <div class="section-title">
+            <div class="title-icon">📋</div>
+            Project &amp; Contractor Information
         </div>
-        
-        <div class="project-info">
-            <div class="project-field">
-                <label for="projectName">Project Name</label>
-                <input type="text" id="projectName" placeholder="Enter project name">
+
+        <div class="grid-3" style="margin-bottom:14px">
+            <div class="field">
+                <label>Agency / Recipient Name</label>
+                <input type="text" id="agencyName" placeholder="e.g. City of Sacramento HCD">
             </div>
-            <div class="project-field">
-                <label for="projectNumber">Project Number</label>
-                <input type="text" id="projectNumber" placeholder="Enter project number">
+            <div class="field">
+                <label>Project Name</label>
+                <input type="text" id="projectName" placeholder="e.g. Downtown Revitalization Project">
             </div>
-            <div class="project-field">
-                <label for="reportDate">Report Date</label>
-                <input type="date" id="reportDate">
+            <div class="field">
+                <label>Project Number</label>
+                <input type="text" id="projectNumber" placeholder="e.g. PRJ-2025-001">
             </div>
         </div>
-        
-        <div class="data-section">
-            <h2 class="section-title">Contractor Data Input</h2>
-            
-            <div class="compliance-info">
-                <strong>Section 3 Compliance Requirements:</strong>
-                Section 3 Workers: Minimum 25% of total project hours<br>
-                Section 3 Targeted Workers: Minimum 5% of total project hours
+
+        <div class="grid-4" style="margin-bottom:14px">
+            <div class="field">
+                <label>Reporting Quarter</label>
+                <div class="quarter-chips">
+                    <div class="q-chip" onclick="selectQ('Q1')">Q1</div>
+                    <div class="q-chip" onclick="selectQ('Q2')">Q2</div>
+                    <div class="q-chip" onclick="selectQ('Q3')">Q3</div>
+                    <div class="q-chip" onclick="selectQ('Q4')">Q4</div>
+                </div>
+                <input type="hidden" id="reportQuarter">
             </div>
-            
-            <table class="input-table">
-                <thead>
-                    <tr>
-                        <th>Contractor Name</th>
-                        <th>Total Employee Hours</th>
-                        <th>Section 3 Worker Hours</th>
-                        <th>Section 3 Targeted Worker Hours</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="contractorTableBody">
-                    <tr>
-                        <td><input type="text" placeholder="Enter Contractor Name"></td>
-                        <td><input type="number" placeholder="0" min="0"></td>
-                        <td><input type="number" placeholder="0" min="0"></td>
-                        <td><input type="number" placeholder="0" min="0"></td>
-                        <td><button onclick="removeRow(this)" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">Remove</button></td>
-                    </tr>
-                </tbody>
-            </table>
-            <button class="btn add-row-btn" onclick="addRow()">+ Add Contractor</button>
-            <button class="btn export-csv-btn" onclick="exportToCSV()">📊 Export to CSV</button>
-            <button class="btn export-pdf-btn" onclick="exportToPDF()">📄 Export to PDF</button>
-        </div>
-        
-        <div class="summary-stats" id="summaryStats">
-            <!-- Stats will be populated by JavaScript -->
-        </div>
-        
-        <div class="charts-grid">
-            <div class="chart-container">
-                <h3 class="chart-title">Total Hours by Contractor</h3>
-                <div class="chart-wrapper">
-                    <canvas id="totalHoursChart"></canvas>
+            <div class="field">
+                <label>Reporting Year</label>
+                <input type="number" id="reportYear" placeholder="2026" min="2000" max="2099">
+            </div>
+            <div class="field col-span-2">
+                <label>Reporting Period</label>
+                <div class="date-range">
+                    <input type="date" id="periodStart">
+                    <span class="date-sep">to</span>
+                    <input type="date" id="periodEnd">
                 </div>
             </div>
-            
-            <div class="chart-container">
-                <h3 class="chart-title">Section 3 Compliance Overview</h3>
-                <div class="chart-wrapper">
-                    <canvas id="complianceChart"></canvas>
-                </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="grid-2" style="margin-bottom:14px">
+            <div class="field">
+                <label>Contractor Name</label>
+                <input type="text" id="contractorName" placeholder="Legal business name">
             </div>
-            
-            <div class="chart-container full-width-chart">
-                <h3 class="chart-title">Detailed Section 3 Worker Hours Breakdown</h3>
-                <div class="chart-wrapper">
-                    <canvas id="detailedChart"></canvas>
-                </div>
+            <div class="field">
+                <label>Contractor Address</label>
+                <input type="text" id="contractorAddress" placeholder="Street, City, State ZIP">
             </div>
-            
-            <div class="chart-container">
-                <h3 class="chart-title">Section 3 Percentages</h3>
-                <div class="chart-wrapper">
-                    <canvas id="percentageChart"></canvas>
+        </div>
+        <div class="grid-3">
+            <div class="field">
+                <label>Contact Name</label>
+                <input type="text" id="contactName" placeholder="Primary contact">
+            </div>
+            <div class="field">
+                <label>Contact Phone</label>
+                <input type="tel" id="contactPhone" placeholder="(916) 555-0000">
+            </div>
+            <div class="field">
+                <label>Contact Email</label>
+                <input type="email" id="contactEmail" placeholder="contact@company.com">
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Section 2: Nature of Agency Efforts ── -->
+    <div class="section-card">
+        <div class="section-title">
+            <div class="title-icon">✅</div>
+            Nature of Agency Efforts
+            <span class="checked-badge" id="checkedBadge">0 selected</span>
+        </div>
+        <p style="font-size:12.5px;color:#8A9BB0;margin-bottom:18px;line-height:1.5">
+            Check all that apply. Maintain records available for HUD review. For each checked effort, document specifics — dates, organizations contacted, participant counts, and outcomes — in the <strong style="color:#4A5D6D">Supporting Notes</strong> field that appears below the item.
+        </p>
+
+        <!-- Category 1 -->
+        <div class="effort-category">
+            <div class="cat-header">
+                <span class="cat-badge">1</span>
+                <span class="cat-title">Worker Outreach &amp; Training</span>
+                <span class="cat-count" id="cnt1">0 of 6</span>
+            </div>
+            <div class="efforts-grid" id="grid1"></div>
+        </div>
+
+        <!-- Category 2 -->
+        <div class="effort-category">
+            <div class="cat-header">
+                <span class="cat-badge">2</span>
+                <span class="cat-title">Resident Assistance</span>
+                <span class="cat-count" id="cnt2">0 of 8</span>
+            </div>
+            <div class="efforts-grid" id="grid2"></div>
+        </div>
+
+        <!-- Category 3 -->
+        <div class="effort-category">
+            <div class="cat-header">
+                <span class="cat-badge">3</span>
+                <span class="cat-title">Business Concern Support</span>
+                <span class="cat-count" id="cnt3">0 of 4</span>
+            </div>
+            <div class="efforts-grid" id="grid3"></div>
+        </div>
+
+        <!-- Other -->
+        <div class="effort-category">
+            <div class="cat-header">
+                <span class="cat-badge" style="background:#8A9BB0">+</span>
+                <span class="cat-title">Other Efforts</span>
+            </div>
+            <div class="efforts-grid">
+                <div class="other-box">
+                    <label>Describe any additional efforts not listed above:</label>
+                    <textarea id="otherText" placeholder="Describe other qualifying efforts — include dates, organizations involved, and outcomes..."></textarea>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
-        let charts = {};
+    <!-- ── Section 3: Labor Hours Summary ── -->
+    <div class="section-card">
+        <div class="section-title">
+            <div class="title-icon">⏱️</div>
+            Labor Hours Summary
+        </div>
+        <p style="font-size:12.5px;color:#8A9BB0;margin-bottom:14px">
+            Enter this contractor's totals for the reporting quarter. <strong style="color:#607890">Section 3 Worker Hours and Section 3 Targeted Hours are entered as separate buckets</strong> — both count toward the 25% threshold.
+        </p>
 
-        // Section 3 compliance thresholds
-        const SECTION3_WORKER_THRESHOLD   = 25; // 25%
-        const SECTION3_TARGETED_THRESHOLD =  5; //  5%
+        <div class="hours-grid">
+            <div class="field">
+                <label>Total Employee Hours</label>
+                <input type="number" id="totalHours" placeholder="0" min="0" oninput="calcHours()">
+            </div>
+            <div class="field">
+                <label>Section 3 Worker Hours <span style="font-weight:400;color:#8A9BB0">(non-targeted)</span></label>
+                <input type="number" id="sect3Hours" placeholder="0" min="0" oninput="calcHours()">
+            </div>
+            <div class="field">
+                <label>Section 3 Targeted Hours <span style="font-weight:400;color:#8A9BB0">(subset)</span></label>
+                <input type="number" id="targetHours" placeholder="0" min="0" oninput="calcHours()">
+            </div>
+        </div>
 
-        // Snow Solitude UI chrome + separate vibrant chart data palette
-        const C = {
-            // UI chrome (Snow Solitude)
-            dark:       '#4A5D6D',   // headers, primary buttons
-            mid:        '#607890',   // secondary
-            steel:      '#8A9BB0',   // muted text
-            frost:      '#C0CEDC',   // borders
-            snow:       '#E4EAF2',   // subtle bg tint
+        <div class="rates-grid">
+            <div class="rate-card" id="cardSect3">
+                <div class="rate-lbl">Section 3 Compliance Rate <span style="font-size:10px;color:#8A9BB0">(this contractor)</span></div>
+                <div class="rate-val" id="valSect3">—</div>
+                <div class="rate-thresh">Minimum: 25% &nbsp;·&nbsp; Non-targeted + Targeted combined</div>
+                <div class="rate-status" id="stsSect3"></div>
+            </div>
+            <div class="rate-card" id="cardTarget">
+                <div class="rate-lbl">Targeted Worker Rate <span style="font-size:10px;color:#8A9BB0">(this contractor)</span></div>
+                <div class="rate-val" id="valTarget">—</div>
+                <div class="rate-thresh">Minimum: 5% (included in 25%)</div>
+                <div class="rate-status" id="stsTarget"></div>
+            </div>
+        </div>
 
-            // Chart data (vibrant blue ramp, independent of UI)
-            chartPale:  '#C0D8EC',   // Regular workers (recedes)
-            chartLight: '#89B8D8',   // light accent
-            chartMid:   '#5090BE',   // medium
-            chartBlue:  '#2E6B9E',   // Section 3 workers (pops)
-            chartNavy:  '#1E4976',   // Section 3 Targeted (deepest)
-        };
-        
-        // Set current date on load
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('reportDate').value = new Date().toISOString().split('T')[0];
-            
-            // Add event listeners to all inputs
-            addInputEventListeners();
-            
-            // Initial chart update
-            updateCharts();
+        <div class="hours-note" style="margin-top:10px">
+            ⚠️ <strong>Contractor-level rates only.</strong> Section 3 benchmarks are assessed against <strong>project-level totals</strong> across all contractors. These figures reflect this contractor's contribution — use the <strong>Section 3 Hours Dashboard</strong> for overall project compliance status.
+        </div>
+        <div class="hours-note" style="margin-top:8px">
+            📎 Submit this report along with all supporting documentation including outreach postings, emails, public announcements, flyers, sign-in sheets, and any community outreach materials that evidence the efforts checked above.
+        </div>
+    </div>
+
+    <!-- ── Section 4: Certification ── -->
+    <div class="section-card">
+        <div class="section-title">
+            <div class="title-icon">🖊️</div>
+            Certification
+        </div>
+
+        <div class="cert-statement">
+            I certify that the information contained in this report is true and accurate, and that the efforts documented herein represent a good faith attempt to comply with Section 3 of the Housing and Urban Development Act of 1968 (12 U.S.C. 1701u), as amended, and implementing regulations at 24 CFR Part 75, to the greatest extent feasible.
+        </div>
+
+        <div class="grid-3">
+            <div class="field">
+                <label>Certifier Name</label>
+                <input type="text" id="certName" placeholder="Full legal name">
+            </div>
+            <div class="field">
+                <label>Title / Position</label>
+                <input type="text" id="certTitle" placeholder="e.g. Project Manager">
+            </div>
+            <div class="field">
+                <label>Certification Date</label>
+                <input type="date" id="certDate">
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Actions ── -->
+    <div class="actions">
+        <button class="btn btn-primary" onclick="exportPDF()">📄 Export PDF Report</button>
+        <button class="btn btn-secondary" onclick="exportCSV()">📊 Export CSV</button>
+        <button class="btn btn-ghost" onclick="resetForm()">↺ Clear Form</button>
+    </div>
+
+</div><!-- /container -->
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+//  EFFORT ITEMS
+// ─────────────────────────────────────────────────────────────────────────────
+const EFFORTS = [
+    // Category 1 — Worker Outreach & Training (6)
+    { id:'e01', cat:1, text:'Outreach efforts to generate job applicants who are Public Housing Targeted Workers.' },
+    { id:'e02', cat:1, text:'Outreach efforts to generate job applicants who are Other Funding Targeted Workers.' },
+    { id:'e03', cat:1, text:'Direct, on-the-job training (including apprenticeships).' },
+    { id:'e04', cat:1, text:'Indirect training such as arranging for, contracting for, or paying tuition for off-site training.' },
+    { id:'e05', cat:1, text:'Technical assistance to help Section 3 workers compete for jobs (e.g., resume assistance, coaching).' },
+    { id:'e06', cat:1, text:'Provided or connected residents with training on computer use or online technologies.' },
+    // Category 2 — Resident Assistance (8)
+    { id:'e07', cat:2, text:'Provided or connected residents with assistance in seeking employment including: drafting resumes, preparing for interviews, finding job opportunities, referring to job placement services.' },
+    { id:'e08', cat:2, text:'Held one or more job fairs.' },
+    { id:'e09', cat:2, text:'Provided or connected residents with supportive services that can provide direct services or referrals.' },
+    { id:'e10', cat:2, text:'Provided or connected residents with supportive services that provide one or more of the following: work readiness health screenings, interview clothing, uniforms, test fees, transportation.' },
+    { id:'e11', cat:2, text:'Assisted residents with finding child care.' },
+    { id:'e12', cat:2, text:'Assisted residents to apply for/or attend community college or a four-year educational institution.' },
+    { id:'e13', cat:2, text:'Assisted residents to apply for/or attend vocational / technical training.' },
+    { id:'e14', cat:2, text:'Assisted residents to obtain financial literacy training and/or coaching.' },
+    // Category 3 — Business Concern Support (4)
+    { id:'e15', cat:3, text:'Outreach efforts to identify and secure bids from Section 3 business concerns.' },
+    { id:'e16', cat:3, text:'Technical assistance to help Section 3 business concerns understand and bid on contracts.' },
+    { id:'e17', cat:3, text:'Division of contracts into smaller jobs to facilitate participation of Section 3 business concerns.' },
+    { id:'e18', cat:3, text:'Bonding assistance, guaranties, or other efforts to support viable bids from Section 3 business concerns.' },
+];
+
+const CAT_TOTALS = { 1:6, 2:8, 3:4 };
+const CAT_NAMES  = { 1:'Worker Outreach & Training', 2:'Resident Assistance', 3:'Business Concern Support' };
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  BUILD EFFORT UI
+// ─────────────────────────────────────────────────────────────────────────────
+function buildEfforts() {
+    [1,2,3].forEach(cat => {
+        const grid = document.getElementById(`grid${cat}`);
+        grid.innerHTML = EFFORTS.filter(e => e.cat === cat).map(e => `
+            <div class="effort-item" id="item-${e.id}">
+                <div class="effort-header" onclick="toggleEffort('${e.id}')">
+                    <input type="checkbox" class="effort-cb" id="cb-${e.id}"
+                           onclick="event.stopPropagation(); toggleEffort('${e.id}')">
+                    <span class="effort-text">${e.text}</span>
+                </div>
+                <div class="notes-wrap" id="nw-${e.id}">
+                    <div class="notes-inner">
+                        <div class="notes-lbl">Supporting Notes</div>
+                        <textarea id="notes-${e.id}"
+                            placeholder="Document specifics: dates, organizations contacted, number of participants, outcomes achieved..."></textarea>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    });
+    refreshCounts();
+}
+
+function toggleEffort(id) {
+    const cb   = document.getElementById(`cb-${id}`);
+    const item = document.getElementById(`item-${id}`);
+    const nw   = document.getElementById(`nw-${id}`);
+
+    item.classList.toggle('checked', cb.checked);
+    nw.classList.toggle('open',      cb.checked);
+
+    if (cb.checked) {
+        setTimeout(() => document.getElementById(`notes-${id}`)?.focus(), 320);
+    }
+    refreshCounts();
+}
+
+function refreshCounts() {
+    let total = 0;
+    [1,2,3].forEach(cat => {
+        const items   = EFFORTS.filter(e => e.cat === cat);
+        const checked = items.filter(e => document.getElementById(`cb-${e.id}`)?.checked).length;
+        total += checked;
+        document.getElementById(`cnt${cat}`).textContent = `${checked} of ${CAT_TOTALS[cat]}`;
+    });
+    document.getElementById('checkedBadge').textContent = `${total} selected`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  QUARTER SELECTOR
+// ─────────────────────────────────────────────────────────────────────────────
+function selectQ(q) {
+    document.getElementById('reportQuarter').value = q;
+    document.querySelectorAll('.q-chip').forEach(c => c.classList.toggle('active', c.textContent === q));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  HOURS CALCULATOR
+// ─────────────────────────────────────────────────────────────────────────────
+function calcHours() {
+    const total  = parseFloat(document.getElementById('totalHours').value)  || 0;
+    const sect3  = parseFloat(document.getElementById('sect3Hours').value)  || 0;
+    const target = parseFloat(document.getElementById('targetHours').value) || 0;
+
+    if (total === 0) {
+        ['Sect3','Target'].forEach(k => {
+            document.getElementById(`val${k}`).textContent = '—';
+            document.getElementById(`val${k}`).className = 'rate-val';
+            document.getElementById(`card${k}`).className = 'rate-card';
+            document.getElementById(`sts${k}`).className  = 'rate-status';
         });
-        
-        function addInputEventListeners() {
-            const inputs = document.querySelectorAll('#contractorTableBody input');
-            inputs.forEach(input => {
-                input.addEventListener('input', updateCharts);
-            });
-        }
-        
-        function addRow() {
-            const tbody = document.getElementById('contractorTableBody');
-            const newRow = document.createElement('tr');
-            newRow.innerHTML = `
-                <td><input type="text" placeholder="Enter contractor name"></td>
-                <td><input type="number" placeholder="0" min="0"></td>
-                <td><input type="number" placeholder="0" min="0"></td>
-                <td><input type="number" placeholder="0" min="0"></td>
-                <td><button onclick="removeRow(this)" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">Remove</button></td>
-            `;
-            tbody.appendChild(newRow);
-            
-            // Add event listeners to new inputs
-            const newInputs = newRow.querySelectorAll('input');
-            newInputs.forEach(input => {
-                input.addEventListener('input', updateCharts);
-            });
-            
-            updateCharts();
-        }
-        
-        function removeRow(button) {
-            button.closest('tr').remove();
-            updateCharts();
-        }
-        
-        function updateCharts() {
-            const data = getTableData();
-            updateSummaryStats(data);
-            validateCompliance(data);
-            
-            // Destroy existing charts
-            Object.values(charts).forEach(chart => {
-                if (chart && typeof chart.destroy === 'function') {
-                    chart.destroy();
-                }
-            });
-            charts = {};
-            
-            // Create new charts
-            createTotalHoursChart(data);
-            createComplianceChart(data);
-            createDetailedChart(data);
-            createPercentageChart(data);
-        }
-        
-        function getTableData() {
-            const rows = document.querySelectorAll('#contractorTableBody tr');
-            const data = [];
-            
-            rows.forEach(row => {
-                const inputs = row.querySelectorAll('input');
-                if (inputs.length >= 4) {
-                    const contractor = inputs[0].value || 'Unnamed';
-                    const totalHours = parseFloat(inputs[1].value) || 0;
-                    const section3Hours = parseFloat(inputs[2].value) || 0;
-                    const targetedHours = parseFloat(inputs[3].value) || 0;
-                    
-                    data.push({
-                        contractor,
-                        totalHours,
-                        section3Hours,
-                        targetedHours,
-                        regularHours: Math.max(0, totalHours - section3Hours),
-                        section3Percentage: totalHours > 0 ? (section3Hours / totalHours * 100) : 0,
-                        targetedPercentage: totalHours > 0 ? (targetedHours / totalHours * 100) : 0
-                    });
-                }
-            });
-            
-            return data;
-        }
-        
-        function validateCompliance(data) {
-            const rows = document.querySelectorAll('#contractorTableBody tr');
-            
-            rows.forEach((row, index) => {
-                const inputs = row.querySelectorAll('input');
-                if (inputs.length >= 4 && data[index]) {
-                    const item = data[index];
-                    
-                    // Validate Section 3 worker hours
-                    if (item.section3Percentage < SECTION3_WORKER_THRESHOLD && item.totalHours > 0) {
-                        inputs[2].classList.add('error');
-                        inputs[2].classList.remove('warning');
-                    } else if (item.section3Percentage < SECTION3_WORKER_THRESHOLD * 1.1 && item.totalHours > 0) {
-                        inputs[2].classList.add('warning');
-                        inputs[2].classList.remove('error');
-                    } else {
-                        inputs[2].classList.remove('error', 'warning');
-                    }
-                    
-                    // Validate targeted worker hours
-                    if (item.targetedPercentage < SECTION3_TARGETED_THRESHOLD && item.totalHours > 0) {
-                        inputs[3].classList.add('error');
-                        inputs[3].classList.remove('warning');
-                    } else if (item.targetedPercentage < SECTION3_TARGETED_THRESHOLD * 1.1 && item.totalHours > 0) {
-                        inputs[3].classList.add('warning');
-                        inputs[3].classList.remove('error');
-                    } else {
-                        inputs[3].classList.remove('error', 'warning');
-                    }
-                    
-                    // Validate that Section 3 hours don't exceed total hours
-                    if (item.section3Hours > item.totalHours) {
-                        inputs[2].classList.add('error');
-                    }
-                    
-                    // Validate that targeted hours don't exceed Section 3 hours
-                    if (item.targetedHours > item.section3Hours) {
-                        inputs[3].classList.add('error');
-                    }
-                }
-            });
-        }
-        
-        function updateSummaryStats(data) {
-            const totalHours = data.reduce((sum, item) => sum + item.totalHours, 0);
-            const totalSection3Hours = data.reduce((sum, item) => sum + item.section3Hours, 0);
-            const totalTargetedHours = data.reduce((sum, item) => sum + item.targetedHours, 0);
-            const avgSection3Percentage = totalHours > 0 ? (totalSection3Hours / totalHours * 100) : 0;
-            const avgTargetedPercentage = totalHours > 0 ? (totalTargetedHours / totalHours * 100) : 0;
-            
-            const section3Compliant = avgSection3Percentage >= SECTION3_WORKER_THRESHOLD;
-            const targetedCompliant = avgTargetedPercentage >= SECTION3_TARGETED_THRESHOLD;
-            
-            const statsHTML = `
-                <div class="stat-card">
-                    <div class="stat-value">${totalHours.toLocaleString()}</div>
-                    <div class="stat-label">Total Project Hours</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${totalSection3Hours.toLocaleString()}</div>
-                    <div class="stat-label">Section 3 Worker Hours</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${totalTargetedHours.toLocaleString()}</div>
-                    <div class="stat-label">Targeted Worker Hours</div>
-                </div>
-                <div class="stat-card ${section3Compliant ? 'compliant' : 'non-compliant'}">
-                    <div class="stat-value ${section3Compliant ? 'compliant' : 'non-compliant'}">${avgSection3Percentage.toFixed(1)}%</div>
-                    <div class="stat-label">Section 3 Compliance Rate (Min: 25%)</div>
-                </div>
-                <div class="stat-card ${targetedCompliant ? 'compliant' : 'non-compliant'}">
-                    <div class="stat-value ${targetedCompliant ? 'compliant' : 'non-compliant'}">${avgTargetedPercentage.toFixed(1)}%</div>
-                    <div class="stat-label">Targeted Worker Rate (Min: 5%)</div>
-                </div>
-            `;
-            
-            document.getElementById('summaryStats').innerHTML = statsHTML;
-        }
-        
-        function createTotalHoursChart(data) {
-            const ctx = document.getElementById('totalHoursChart').getContext('2d');
-            charts.totalHours = new Chart(ctx, {
-                type: 'bar',
-                plugins: [ChartDataLabels],
-                data: {
-                    labels: data.map(item => item.contractor),
-                    datasets: [{
-                        label: 'Total Hours',
-                        data: data.map(item => item.totalHours),
-                        backgroundColor: C.chartBlue,
-                        borderColor: C.chartMid,
-                        borderWidth: 2,
-                        borderRadius: 6,
-                        borderSkipped: false,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: { duration: 0 },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: 'rgba(0,0,0,0.8)',
-                            titleColor: 'white', bodyColor: 'white',
-                            cornerRadius: 8, displayColors: false
-                        },
-                        datalabels: {
-                            anchor: 'center',
-                            align: 'center',
-                            color: 'white',
-                            font: { weight: 'bold', size: 14 },
-                            formatter: (v) => v.toLocaleString()
-                        }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#666' } },
-                        x: { grid: { display: false }, ticks: { color: '#666', maxRotation: 45 } }
-                    }
-                }
-            });
-        }
-        
-        function createComplianceChart(data) {
-            // Per HUD regulation: Targeted Section 3 hours are INCLUDED within the
-            // Section 3 25% threshold (the 5% targeted is part of the 25%).
-            // Doughnut shows two segments: Regular Workers vs Section 3 (combined).
-            const totalHours   = data.reduce((s, i) => s + i.totalHours,    0);
-            const totalSection3 = data.reduce((s, i) => s + i.section3Hours, 0);
-            const totalRegular  = Math.max(0, totalHours - totalSection3);
+        return;
+    }
 
-            const ctx = document.getElementById('complianceChart').getContext('2d');
-            charts.compliance = new Chart(ctx, {
-                type: 'doughnut',
-                plugins: [ChartDataLabels],
-                data: {
-                    labels: ['Regular Workers', 'Section 3 Workers (incl. Targeted)'],
-                    datasets: [{
-                        data: [totalRegular, totalSection3],
-                        backgroundColor: [C.chartPale, C.chartBlue],
-                        borderColor: ['white', 'white'],
-                        borderWidth: 3,
-                        hoverOffset: 10
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: { duration: 0 },
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: { padding: 16, color: '#4A5D6D', font: { size: 12 } }
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(0,0,0,0.8)',
-                            titleColor: 'white', bodyColor: 'white', cornerRadius: 8,
-                            callbacks: {
-                                label: function(context) {
-                                    const pct = totalHours > 0 ? ((context.raw / totalHours) * 100).toFixed(1) : '0.0';
-                                    return `${context.label}: ${context.raw.toLocaleString()} hrs (${pct}%)`;
-                                }
-                            }
-                        },
-                        datalabels: {
-                            // Pale segment (index 0) uses dark text; Section 3 segment uses white
-                            color: function(ctx) {
-                                return ctx.dataIndex === 0 ? C.dark : 'white';
-                            },
-                            font: { weight: 'bold', size: 12 },
-                            textAlign: 'center',
-                            formatter: function(value, ctx) {
-                                if (value === 0) return '';
-                                const pct = totalHours > 0 ? ((value / totalHours) * 100).toFixed(1) : '0';
-                                return value.toLocaleString() + '\n' + pct + '%';
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        function createDetailedChart(data) {
-            const ctx = document.getElementById('detailedChart').getContext('2d');
-            charts.detailed = new Chart(ctx, {
-                type: 'bar',
-                plugins: [ChartDataLabels],
-                data: {
-                    labels: data.map(item => item.contractor),
-                    datasets: [
-                        {
-                            label: 'Regular Workers',
-                            data: data.map(item => item.regularHours),
-                            backgroundColor: C.chartPale,
-                            borderColor: C.chartLight,
-                            borderWidth: 2,
-                            borderRadius: 6,
-                        },
-                        {
-                            label: 'Section 3 Workers',
-                            data: data.map(item => item.section3Hours),
-                            backgroundColor: C.chartBlue,
-                            borderColor: C.chartMid,
-                            borderWidth: 2,
-                            borderRadius: 6,
-                        },
-                        {
-                            label: 'Section 3 Targeted',
-                            data: data.map(item => item.targetedHours),
-                            backgroundColor: C.chartNavy,
-                            borderColor: '#2a5052',
-                            borderWidth: 2,
-                            borderRadius: 6,
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: { duration: 0 },
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                            labels: { padding: 20, color: '#555', font: { size: 12 } }
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(0,0,0,0.8)',
-                            titleColor: 'white', bodyColor: 'white',
-                            cornerRadius: 8, mode: 'index', intersect: false
-                        },
-                        datalabels: {
-                            anchor: 'center',
-                            align: 'center',
-                            font: { weight: 'bold', size: 11 },
-                            // Pale Oak bars get dark text; Ocean Blue / Stormy Teal get white
-                            color: function(ctx) { return ctx.datasetIndex === 0 ? C.chartNavy : 'white'; },
-                            formatter: function(v) { return v > 0 ? v.toLocaleString() : ''; }
-                        }
-                    },
-                    scales: {
-                        x: { stacked: false, grid: { display: false }, ticks: { color: '#666', maxRotation: 45 } },
-                        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#666' } }
-                    }
-                }
-            });
-        }
-        
-        function createPercentageChart(data) {
-            const ctx = document.getElementById('percentageChart').getContext('2d');
-            charts.percentage = new Chart(ctx, {
-                type: 'line',
-                plugins: [ChartDataLabels],
-                data: {
-                    labels: data.map(item => item.contractor),
-                    datasets: [
-                        {
-                            label: 'Section 3 Worker %',
-                            data: data.map(item => item.section3Percentage),
-                            borderColor: C.chartBlue,
-                            backgroundColor: C.chartBlue + '20',
-                            borderWidth: 3,
-                            pointBackgroundColor: C.chartBlue,
-                            pointBorderColor: 'white',
-                            pointBorderWidth: 2,
-                            pointRadius: 7,
-                            tension: 0.4,
-                            fill: true,
-                            datalabels: {
-                                align: 'top',
-                                offset: 8,
-                                color: C.chartBlue,
-                                font: { weight: 'bold', size: 12 },
-                                formatter: (v) => `${v.toFixed(1)}%`
-                            }
-                        },
-                        {
-                            label: 'Targeted Worker %',
-                            data: data.map(item => item.targetedPercentage),
-                            borderColor: C.chartNavy,
-                            backgroundColor: C.chartNavy + '20',
-                            borderWidth: 3,
-                            pointBackgroundColor: C.chartNavy,
-                            pointBorderColor: 'white',
-                            pointBorderWidth: 2,
-                            pointRadius: 7,
-                            tension: 0.4,
-                            fill: true,
-                            datalabels: {
-                                align: 'bottom',
-                                offset: 8,
-                                color: C.chartNavy,
-                                font: { weight: 'bold', size: 12 },
-                                formatter: (v) => `${v.toFixed(1)}%`
-                            }
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: { duration: 0 },
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                            labels: { padding: 20, color: '#555', font: { size: 12 } }
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(0,0,0,0.8)',
-                            titleColor: 'white', bodyColor: 'white', cornerRadius: 8,
-                            callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%` }
-                        },
-                        datalabels: {} // per-dataset config above takes precedence
-                    },
-                    scales: {
-                        x: { grid: { display: false }, ticks: { color: '#666', maxRotation: 45 } },
-                        y: {
-                            beginAtZero: true,
-                            max: 100,
-                            grid: { color: 'rgba(0,0,0,0.05)' },
-                            ticks: { color: '#666', callback: (v) => v + '%' }
-                        }
-                    },
-                    elements: { line: { borderJoinStyle: 'round' } }
-                }
-            });
-        }
-        
-        function exportToCSV() {
-            const data = getTableData();
-            const projectName = document.getElementById('projectName').value || 'Project';
-            const projectNumber = document.getElementById('projectNumber').value || 'N/A';
-            const reportDate = document.getElementById('reportDate').value || new Date().toISOString().split('T')[0];
-            
-            let csvContent = "data:text/csv;charset=utf-8,";
-            
-            // Add header information
-            csvContent += `Section 3 Contractor Hours Report\n`;
-            csvContent += `Project Name:,${projectName}\n`;
-            csvContent += `Project Number:,${projectNumber}\n`;
-            csvContent += `Report Date:,${reportDate}\n\n`;
-            
-            // Add compliance requirements
-            csvContent += `Section 3 Compliance Requirements:\n`;
-            csvContent += `Section 3 Workers:,Minimum 25% of total project hours\n`;
-            csvContent += `Section 3 Targeted Workers:,Minimum 5% of total project hours\n\n`;
-            
-            // Add column headers
-            csvContent += "Contractor Name,Total Employee Hours,Section 3 Worker Hours,Section 3 Targeted Worker Hours,Section 3 Worker %,Targeted Worker %,Compliance Status\n";
-            
-            // Add data rows
-            data.forEach(row => {
-                const section3Compliant = row.section3Percentage >= SECTION3_WORKER_THRESHOLD;
-                const targetedCompliant = row.targetedPercentage >= SECTION3_TARGETED_THRESHOLD;
-                const overallCompliant = section3Compliant && targetedCompliant;
-                
-                csvContent += `"${row.contractor}",${row.totalHours},${row.section3Hours},${row.targetedHours},${row.section3Percentage.toFixed(1)}%,${row.targetedPercentage.toFixed(1)}%,${overallCompliant ? 'Compliant' : 'Non-Compliant'}\n`;
-            });
-            
-            // Add summary
-            const totalHours = data.reduce((sum, item) => sum + item.totalHours, 0);
-            const totalSection3Hours = data.reduce((sum, item) => sum + item.section3Hours, 0);
-            const totalTargetedHours = data.reduce((sum, item) => sum + item.targetedHours, 0);
-            const avgSection3Percentage = totalHours > 0 ? (totalSection3Hours / totalHours * 100) : 0;
-            const avgTargetedPercentage = totalHours > 0 ? (totalTargetedHours / totalHours * 100) : 0;
-            
-            csvContent += `\nSummary:\n`;
-            csvContent += `Total Project Hours:,${totalHours.toLocaleString()}\n`;
-            csvContent += `Total Section 3 Worker Hours:,${totalSection3Hours.toLocaleString()}\n`;
-            csvContent += `Total Targeted Worker Hours:,${totalTargetedHours.toLocaleString()}\n`;
-            csvContent += `Overall Section 3 Compliance Rate:,${avgSection3Percentage.toFixed(1)}%\n`;
-            csvContent += `Overall Targeted Worker Rate:,${avgTargetedPercentage.toFixed(1)}%\n`;
-            csvContent += `Project Compliance Status:,${(avgSection3Percentage >= SECTION3_WORKER_THRESHOLD && avgTargetedPercentage >= SECTION3_TARGETED_THRESHOLD) ? 'COMPLIANT' : 'NON-COMPLIANT'}\n`;
-            
-            // Create and download file
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `Section3_Report_${projectNumber}_${reportDate}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-        
-async function exportToPDF() {
-    const button = document.querySelector('.export-pdf-btn');
-    const originalText = button.textContent;
+    // Section 3 compliance = (Section 3 non-targeted + Targeted) / total
+    // Targeted is entered as a separate bucket; both pools count toward the 25% threshold
+    setRate('Sect3',  ((sect3 + target) / total * 100), 25);
+    setRate('Target', (target           / total * 100),  5);
+}
 
-    button.textContent = 'Generating PDF...';
-    button.classList.add('export-loading');
+function setRate(key, pct, threshold) {
+    const pass   = pct >= threshold;
+    const valEl  = document.getElementById(`val${key}`);
+    const cardEl = document.getElementById(`card${key}`);
+    const stsEl  = document.getElementById(`sts${key}`);
 
-    const overlay = document.createElement('div');
-    overlay.className = 'pdf-progress-overlay';
-    const progress = document.createElement('div');
-    progress.className = 'pdf-progress';
-    progress.innerHTML = `
-        <div class="spinner"></div>
-        <h3>Generating PDF Report</h3>
-        <p>Please wait while we create your Section 3 compliance report...</p>
-    `;
-    overlay.appendChild(progress);
-    document.body.appendChild(overlay);
+    valEl.textContent = pct.toFixed(1) + '%';
+    valEl.className   = 'rate-val '  + (pass ? 'pass' : 'fail');
+    cardEl.className  = 'rate-card ' + (pass ? 'pass' : 'fail');
+    stsEl.textContent = pass ? 'Compliant' : 'Non-Compliant';
+    stsEl.className   = 'rate-status ' + (pass ? 'pass' : 'fail');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  COLLECT DATA
+// ─────────────────────────────────────────────────────────────────────────────
+function getData() {
+    const checked = EFFORTS
+        .filter(e => document.getElementById(`cb-${e.id}`)?.checked)
+        .map(e => ({ ...e, notes: document.getElementById(`notes-${e.id}`)?.value.trim() || '' }));
+
+    return {
+        agencyName:   document.getElementById('agencyName').value.trim(),
+        projectName:  document.getElementById('projectName').value.trim(),
+        projectNum:   document.getElementById('projectNumber').value.trim(),
+        quarter:      document.getElementById('reportQuarter').value,
+        year:         document.getElementById('reportYear').value.trim(),
+        periodStart:  document.getElementById('periodStart').value,
+        periodEnd:    document.getElementById('periodEnd').value,
+        contractor:   document.getElementById('contractorName').value.trim(),
+        address:      document.getElementById('contractorAddress').value.trim(),
+        contact:      document.getElementById('contactName').value.trim(),
+        phone:        document.getElementById('contactPhone').value.trim(),
+        email:        document.getElementById('contactEmail').value.trim(),
+        totalHours:   parseFloat(document.getElementById('totalHours').value)  || 0,
+        sect3Hours:   parseFloat(document.getElementById('sect3Hours').value)  || 0,
+        targetHours:  parseFloat(document.getElementById('targetHours').value) || 0,
+        certName:     document.getElementById('certName').value.trim(),
+        certTitle:    document.getElementById('certTitle').value.trim(),
+        certDate:     document.getElementById('certDate').value,
+        otherText:    document.getElementById('otherText').value.trim(),
+        checked,
+    };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  PDF EXPORT
+// ─────────────────────────────────────────────────────────────────────────────
+async function exportPDF() {
+    document.getElementById('overlay').classList.add('visible');
+    await new Promise(r => setTimeout(r, 80));
 
     try {
-        await new Promise(resolve => setTimeout(resolve, 100));
-
+        const d   = getData();
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('p', 'mm', 'a4');
+        const doc = new jsPDF('p','mm','a4');
+        const PW  = doc.internal.pageSize.getWidth();
+        const PH  = doc.internal.pageSize.getHeight();
+        const M   = 12;
+        const UW  = PW - M * 2;
 
-        const pageWidth  = doc.internal.pageSize.getWidth();   // 210mm
-        const pageHeight = doc.internal.pageSize.getHeight();  // 297mm
-        const margin     = 10;
-        const usable     = pageWidth - margin * 2;             // 190mm
+        // Palette (RGB arrays)
+        const DARK  = [74,93,109];
+        const MID   = [96,120,144];
+        const STEEL = [138,155,176];
+        const SNOW  = [228,234,242];
+        const FROST = [192,206,220];
+        const BLUE  = [46,107,158];
+        const PASS  = [40,167,69];
+        const FAIL  = [220,53,69];
 
-        // ── Shared data ──────────────────────────────────────────────────────
-        const projectName   = document.getElementById('projectName').value   || 'Not Provided';
-        const projectNumber = document.getElementById('projectNumber').value || 'Not Provided';
-        const reportDate    = document.getElementById('reportDate').value    || new Date().toISOString().split('T')[0];
+        let y = 0, pg = 1;
 
-        const data                 = getTableData();
-        const totalHours           = data.reduce((s, i) => s + i.totalHours,      0);
-        const totalSection3Hours   = data.reduce((s, i) => s + i.section3Hours,   0);
-        const totalTargetedHours   = data.reduce((s, i) => s + i.targetedHours,   0);
-        const avgSection3Pct       = totalHours > 0 ? (totalSection3Hours / totalHours * 100) : 0;
-        const avgTargetedPct       = totalHours > 0 ? (totalTargetedHours / totalHours * 100) : 0;
-        const isCompliant          = avgSection3Pct >= 25 && avgTargetedPct >= 5;
-
-        // ════════════════════════════════════════════════════════════════════
-        //  PAGE 1 — Report data
-        // ════════════════════════════════════════════════════════════════════
-        let y = 0;
-
-        // Header band — Ocean Blue
-        doc.setFillColor(74, 93, 109);
-        doc.rect(0, 0, pageWidth, 35, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(18);
-        doc.setFont(undefined, 'bold');
-        doc.text('SECTION 3 CONTRACTOR HOURS REPORT', pageWidth / 2, 14, { align: 'center' });
-        doc.setFontSize(10);
-        doc.setFont(undefined, 'normal');
-        doc.text('Track Contractor Compliance with Section 3 Worker Hour Requirements', pageWidth / 2, 23, { align: 'center' });
-        doc.setFontSize(8);
-        doc.text('Page 1 of 2', pageWidth / 2, 30, { align: 'center' });
-
-        doc.setTextColor(0, 0, 0);
-        y = 45;
-
-        // Project info box
-        doc.setFillColor(248, 249, 250);
-        doc.rect(margin, y, usable, 28, 'F');
-        doc.setDrawColor(200, 200, 200);
-        doc.rect(margin, y, usable, 28, 'S');
-        doc.setFontSize(13);
-        doc.setFont(undefined, 'bold');
-        doc.text('PROJECT INFORMATION', pageWidth / 2, y + 8, { align: 'center' });
-        doc.setFontSize(10);
-        doc.setFont(undefined, 'normal');
-        doc.text(`Project: ${projectName}`, pageWidth / 2, y + 16, { align: 'center' });
-        doc.text(`Project Number: ${projectNumber}   |   Report Date: ${reportDate}`, pageWidth / 2, y + 23, { align: 'center' });
-        y += 36;
-
-        // Compliance status banner
-        const statusColor = isCompliant ? [46, 204, 113] : [231, 76, 60];
-        doc.setFillColor(...statusColor);
-        doc.rect(margin, y, usable, 12, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(12);
-        doc.setFont(undefined, 'bold');
-        doc.text(`OVERALL COMPLIANCE STATUS: ${isCompliant ? 'COMPLIANT' : 'NON-COMPLIANT'}`, pageWidth / 2, y + 8, { align: 'center' });
-        doc.setTextColor(0, 0, 0);
-        y += 20;
-
-        // Summary boxes (3 across)
-        doc.setFontSize(13);
-        doc.setFont(undefined, 'bold');
-        doc.text('PROJECT SUMMARY', margin, y);
-        y += 8;
-
-        const boxes = [
-            { label: 'Total Project Hours',       value: totalHours.toLocaleString(),         color: [74, 93, 109]  }, // Dark Slate
-            { label: 'Section 3 Worker Hours',     value: totalSection3Hours.toLocaleString(), color: [46, 107, 158]  }, // Chart Blue
-            { label: 'Section 3 Targeted Hours',   value: totalTargetedHours.toLocaleString(), color: [30, 73, 118]   }, // Chart Navy
-        ];
-        const boxW = (usable - 10) / 3;
-        boxes.forEach((b, i) => {
-            const bx = margin + i * (boxW + 5);
-            doc.setFillColor(...b.color);
-            doc.rect(bx, y, boxW, 18, 'F');
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(13);
-            doc.setFont(undefined, 'bold');
-            doc.text(b.value, bx + boxW / 2, y + 8,  { align: 'center' });
-            doc.setFontSize(7);
-            doc.setFont(undefined, 'normal');
-            doc.text(b.label, bx + boxW / 2, y + 14, { align: 'center' });
-        });
-        doc.setTextColor(0, 0, 0);
-        y += 26;
-
-        // Compliance rate bars
-        doc.setFontSize(12);
-        doc.setFont(undefined, 'bold');
-        doc.text('COMPLIANCE RATES', margin, y);
-        y += 7;
-
-        const sect3Color  = avgSection3Pct >= 25 ? [46, 204, 113] : [231, 76, 60];
-        const targetColor = avgTargetedPct  >= 5  ? [46, 204, 113] : [231, 76, 60];
-        const barW = 150;
-
-        doc.setFontSize(9);
-        doc.setFont(undefined, 'normal');
-        doc.text(`Section 3 Workers: ${avgSection3Pct.toFixed(1)}%  (Min: 25%)`, margin, y);
-        doc.setFillColor(...sect3Color);
-        doc.rect(margin, y + 2, (avgSection3Pct / 100) * barW, 4, 'F');
-        doc.setDrawColor(200, 200, 200);
-        doc.rect(margin, y + 2, barW, 4, 'S');
-        y += 11;
-
-        doc.text(`Targeted Workers: ${avgTargetedPct.toFixed(1)}%  (Min: 5%)`, margin, y);
-        doc.setFillColor(...targetColor);
-        doc.rect(margin, y + 2, (avgTargetedPct / 100) * barW, 4, 'F');
-        doc.setDrawColor(200, 200, 200);
-        doc.rect(margin, y + 2, barW, 4, 'S');
-        y += 17;
-
-        // Contractor details table (autoTable — plain text status, no unicode)
-        doc.setFontSize(13);
-        doc.setFont(undefined, 'bold');
-        doc.text('CONTRACTOR DETAILS', margin, y);
-
-        const tableBody = data.map(item => [
-            item.contractor,
-            item.totalHours.toLocaleString(),
-            item.section3Hours.toLocaleString(),
-            item.targetedHours.toLocaleString(),
-            `${item.section3Percentage.toFixed(1)}%`,
-            `${item.targetedPercentage.toFixed(1)}%`,
-            (item.section3Percentage >= 25 && item.targetedPercentage >= 5) ? 'Compliant' : 'Non-Compliant'
-        ]);
-
-        doc.autoTable({
-            startY: y + 4,
-            head: [['Contractor', 'Total Hrs', 'Sect 3 Hrs', 'Target Hrs', 'Sect 3 %', 'Target %', 'Status']],
-            body: tableBody,
-            theme: 'striped',
-            headStyles: { fillColor: [74, 93, 109], textColor: 255, fontStyle: 'bold', fontSize: 9 },
-            styles: { fontSize: 9, cellPadding: 3, halign: 'center' },
-            columnStyles: {
-                0: { halign: 'left', cellWidth: 42 },
-                6: {
-                    halign: 'center',
-                    fontStyle: 'bold',
-                    textColor: function(cell) {
-                        return cell.raw === 'Compliant' ? [46, 204, 113] : [231, 76, 60];
-                    }
-                }
-            },
-            alternateRowStyles: { fillColor: [248, 249, 250] },
-            // Color status cell text per row
-            didParseCell: function(hookData) {
-                if (hookData.column.index === 6 && hookData.section === 'body') {
-                    hookData.cell.styles.textColor = hookData.cell.raw === 'Compliant'
-                        ? [46, 204, 113] : [231, 76, 60];
-                }
-            }
-        });
-
-        y = doc.lastAutoTable.finalY + 12;
-
-        // Requirements footer box — Stormy Teal
-        doc.setFillColor(74, 93, 109);
-        doc.rect(margin, y, usable, 22, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(11);
-        doc.setFont(undefined, 'bold');
-        doc.text('SECTION 3 COMPLIANCE REQUIREMENTS', pageWidth / 2, y + 7, { align: 'center' });
-        doc.setFontSize(9);
-        doc.setFont(undefined, 'normal');
-        doc.text('Section 3 Workers: Minimum 25% of total project hours', pageWidth / 2, y + 13, { align: 'center' });
-        doc.text('Section 3 Targeted Workers: Minimum 5% of total project hours', pageWidth / 2, y + 19, { align: 'center' });
-
-        // Page 1 footer line
-        doc.setTextColor(160, 160, 160);
-        doc.setFontSize(7);
-        doc.text(`Generated: ${new Date().toLocaleString()}`, margin, pageHeight - 6);
-        doc.text('Section 3 Contractor Hours Dashboard', pageWidth - margin, pageHeight - 6, { align: 'right' });
-
-        // ════════════════════════════════════════════════════════════════════
-        //  PAGE 2 — Charts (pulled directly from Chart.js canvas elements)
-        // ════════════════════════════════════════════════════════════════════
-        doc.addPage();
-        y = 0;
-
-        // Page 2 header band — Ocean Blue
-        doc.setFillColor(74, 93, 109);
-        doc.rect(0, 0, pageWidth, 28, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(16);
-        doc.setFont(undefined, 'bold');
-        doc.text('SECTION 3 COMPLIANCE — VISUAL ANALYSIS', pageWidth / 2, 13, { align: 'center' });
-        doc.setFontSize(9);
-        doc.setFont(undefined, 'normal');
-        doc.text(`${projectName}  |  ${projectNumber}  |  ${reportDate}`, pageWidth / 2, 21, { align: 'center' });
-        doc.setFontSize(8);
-        doc.text('Page 2 of 2', pageWidth / 2, 26, { align: 'center' });
-        doc.setTextColor(0, 0, 0);
-        y = 34;
-
-        // Helper: add a chart image preserving its actual canvas aspect ratio.
-        // Returns the actual height used so the caller can advance y correctly.
-        function addChartImage(chartObj, label, x, imgY, w) {
-            if (!chartObj) return 0;
-            const canvas = chartObj.canvas;
-            // Compute natural height from canvas pixel ratio; cap at 85mm to prevent overflow
-            const naturalH = Math.min(w * (canvas.height / canvas.width), 85);
-            doc.setFontSize(9);
-            doc.setFont(undefined, 'bold');
-            doc.setTextColor(74, 93, 109); // Dark Slate label
-            doc.text(label, x + w / 2, imgY - 2, { align: 'center' });
-            const imgData = chartObj.toBase64Image('image/png', 1.0);
-            doc.addImage(imgData, 'PNG', x, imgY, w, naturalH);
-            return naturalH;
+        function footer() {
+            doc.setDrawColor(...FROST); doc.setLineWidth(0.4);
+            doc.line(M, PH-13, PW-M, PH-13);
+            doc.setFontSize(7); doc.setFont(undefined,'normal'); doc.setTextColor(...STEEL);
+            doc.text(`Generated: ${new Date().toLocaleString()}`, M, PH-7);
+            doc.text(`Section 3 Quarterly Effort Report  |  Page ${pg}`, PW-M, PH-7, {align:'right'});
         }
 
-        const half = (usable - 6) / 2;   // two side-by-side charts, 6mm gap
+        function newPage(need) {
+            if (y + need > PH - 18) {
+                footer(); doc.addPage(); pg++; y = M; return true;
+            }
+            return false;
+        }
 
-        // Row 1: Total Hours (left) + Compliance Doughnut (right)
-        const h1 = addChartImage(charts.totalHours, 'Total Hours by Contractor',     margin,            y + 5, half);
-        const h2 = addChartImage(charts.compliance, 'Section 3 Compliance Overview', margin + half + 6, y + 5, half);
-        y += Math.max(h1, h2) + 14;
+        // ── Header band ──────────────────────────────────────────────────────
+        doc.setFillColor(...DARK);
+        doc.rect(0, 0, PW, 30, 'F');
+        doc.setTextColor(255,255,255);
+        doc.setFontSize(15); doc.setFont(undefined,'bold');
+        doc.text('SECTION 3 QUARTERLY EFFORT REPORT', PW/2, 12, {align:'center'});
+        doc.setFontSize(8.5); doc.setFont(undefined,'normal');
+        doc.text('Documentation of Qualitative Compliance Efforts  |  24 CFR Part 75', PW/2, 20, {align:'center'});
+        const perStr = d.quarter && d.year ? `Reporting Period: ${d.quarter} ${d.year}` +
+            (d.periodStart && d.periodEnd ? `  (${d.periodStart} to ${d.periodEnd})` : '') : '';
+        if (perStr) doc.text(perStr, PW/2, 27, {align:'center'});
 
-        // Row 2: Detailed breakdown — full width
-        const h3 = addChartImage(charts.detailed, 'Detailed Section 3 Worker Hours Breakdown', margin, y + 5, usable);
-        y += h3 + 14;
+        y = 38; doc.setTextColor(0,0,0);
 
-        // Row 3: Percentages — left half
-        const h4 = addChartImage(charts.percentage, 'Section 3 Percentages by Contractor', margin, y + 5, half);
-        y += h4 + 10;
+        // ── Project / Contractor info ─────────────────────────────────────────
+        doc.setFillColor(...SNOW); doc.setDrawColor(...FROST);
+        doc.roundedRect(M, y, UW, 42, 3, 3, 'FD');
 
-        // Page 2 footer line
-        doc.setTextColor(160, 160, 160);
-        doc.setFontSize(7);
-        doc.setFont(undefined, 'normal');
-        doc.text(`Generated: ${new Date().toLocaleString()}`, margin, pageHeight - 6);
-        doc.text('Section 3 Contractor Hours Dashboard', pageWidth - margin, pageHeight - 6, { align: 'right' });
+        const c1 = M+5, c2 = M + UW/2 + 3;
+        const setBold   = () => doc.setFont(undefined,'bold');
+        const setNormal = () => doc.setFont(undefined,'normal');
+        const setSteel  = () => doc.setTextColor(...STEEL);
+        const setDark   = () => doc.setTextColor(...DARK);
 
-        // ── Save ──────────────────────────────────────────────────────────
-        doc.save(`Section3_Report_${projectNumber}_${reportDate}.pdf`);
+        doc.setFontSize(7.5);
+        setBold(); setDark(); doc.text('AGENCY / RECIPIENT', c1, y+7);
+        setNormal(); doc.setFontSize(9); doc.text(d.agencyName||'—', c1, y+13);
 
-    } catch (error) {
-        console.error('Error generating PDF:', error);
+        doc.setFontSize(7.5);
+        setBold(); doc.text('PROJECT', c2, y+7);
+        setNormal(); doc.setFontSize(9); doc.text(`${d.projectName||'—'}  |  ${d.projectNum||'—'}`, c2, y+13);
+
+        doc.setFontSize(7.5);
+        setBold(); doc.text('CONTRACTOR', c1, y+21);
+        setNormal(); doc.setFontSize(9); doc.text(d.contractor||'—', c1, y+27);
+        setSteel(); doc.setFontSize(8); doc.text(d.address||'', c1, y+33);
+
+        doc.setFontSize(7.5); setDark();
+        setBold(); doc.text('CONTACT', c2, y+21);
+        setNormal(); doc.setFontSize(9); doc.text(d.contact||'—', c2, y+27);
+        setSteel(); doc.setFontSize(8);
+        doc.text([d.phone, d.email].filter(Boolean).join('  |  '), c2, y+33);
+
+        setDark(); y += 49;
+
+        // ── Compliance status ─────────────────────────────────────────────────
+        if (d.totalHours > 0) {
+            const combinedS3 = d.sect3Hours + d.targetHours;
+            const s3p  = combinedS3    / d.totalHours * 100;
+            const tgp  = d.targetHours / d.totalHours * 100;
+            const ok   = s3p >= 25 && tgp >= 5;
+            doc.setFillColor(...(ok ? PASS : FAIL));
+            doc.rect(M, y, UW, 16, 'F');
+            doc.setTextColor(255,255,255); doc.setFontSize(8.5); setBold();
+            doc.text(
+                `CONTRACTOR HOURS STATUS: ${ok ? 'COMPLIANT' : 'NON-COMPLIANT'}  |  Section 3: ${s3p.toFixed(1)}% (min 25%)  |  Targeted: ${tgp.toFixed(1)}% (min 5%)`,
+                PW/2, y + 7, {align:'center'}
+            );
+            doc.setFontSize(7); setNormal();
+            doc.text(
+                'Contractor-level rates only — project compliance is assessed across all contractors combined.',
+                PW/2, y + 13, {align:'center'}
+            );
+            setDark(); y += 22;
+        }
+
+        // ── Efforts section header ────────────────────────────────────────────
+        newPage(20);
+        doc.setFillColor(...DARK); doc.rect(M, y, UW, 9, 'F');
+        doc.setTextColor(255,255,255); doc.setFontSize(10); setBold();
+        doc.text('NATURE OF AGENCY EFFORTS', PW/2, y+6.5, {align:'center'});
+        setDark(); y += 13;
+
+        // Group checked efforts by category
+        const byCat = {1:[],2:[],3:[]};
+        d.checked.forEach(e => { if (byCat[e.cat]) byCat[e.cat].push(e); });
+
+        if (d.checked.length === 0 && !d.otherText) {
+            doc.setFontSize(9); doc.setFont(undefined,'italic'); doc.setTextColor(...STEEL);
+            doc.text('No efforts were selected for this reporting period.', M, y+5);
+            y += 12;
+        } else {
+            [1,2,3].forEach(cat => {
+                const items = byCat[cat];
+                if (!items.length) return;
+
+                newPage(14);
+                // Sub-header
+                doc.setFillColor(...SNOW); doc.setDrawColor(...FROST);
+                doc.rect(M, y, UW, 7.5, 'FD');
+                doc.setFontSize(8); setBold(); setDark();
+                doc.text(`${cat}  ${CAT_NAMES[cat].toUpperCase()}`, M+4, y+5.5);
+                setNormal(); doc.setTextColor(...MID);
+                doc.text(`${items.length} effort${items.length>1?'s':''} documented`, PW-M-2, y+5.5, {align:'right'});
+                setDark(); y += 10;
+
+                items.forEach((e, idx) => {
+                    const lbl   = doc.splitTextToSize(e.text, UW-14);
+                    const nts   = e.notes ? doc.splitTextToSize(e.notes, UW-18) : [];
+                    const h     = lbl.length * 4.3 + (nts.length ? nts.length * 4 + 10 : 0) + 8;
+                    newPage(h + 3);
+
+                    doc.setFillColor(idx%2===0 ? 255 : 252, idx%2===0 ? 255 : 253, idx%2===0 ? 255 : 254);
+                    doc.setDrawColor(...FROST);
+                    doc.rect(M, y, UW, h, 'FD');
+                    doc.setFillColor(...BLUE); doc.rect(M, y, 3.5, h, 'F'); // accent bar
+
+                    doc.setFontSize(9); setNormal(); setDark();
+                    doc.text(lbl, M+7, y+5.5);
+
+                    if (nts.length) {
+                        const ny = y + lbl.length * 4.3 + 8;
+                        doc.setFontSize(7); setBold(); doc.setTextColor(...STEEL);
+                        doc.text('SUPPORTING NOTES:', M+7, ny);
+                        setNormal(); setDark(); doc.setFontSize(8.5);
+                        doc.text(nts, M+7, ny+4.5);
+                    }
+                    y += h + 2;
+                });
+                y += 3;
+            });
+
+            // Other
+            if (d.otherText) {
+                const lines = doc.splitTextToSize(d.otherText, UW-14);
+                const h = lines.length * 4.3 + 14;
+                newPage(h + 6);
+                doc.setFillColor(...SNOW); doc.setDrawColor(...FROST);
+                doc.rect(M, y, UW, h, 'FD');
+                doc.setFillColor(...MID); doc.rect(M, y, 3.5, h, 'F');
+                doc.setFontSize(8); setBold(); setDark(); doc.text('OTHER EFFORTS', M+7, y+6);
+                setNormal(); doc.setFontSize(9); doc.text(lines, M+7, y+12);
+                y += h + 5;
+            }
+        }
+
+        // ── Labor Hours Summary ───────────────────────────────────────────────
+        newPage(50); y += 4;
+        doc.setFillColor(...MID); doc.rect(M, y, UW, 9, 'F');
+        doc.setTextColor(255,255,255); doc.setFontSize(10); setBold();
+        doc.text('LABOR HOURS SUMMARY', PW/2, y+6.5, {align:'center'});
+        setDark(); y += 12;
+
+        const total      = d.totalHours;
+        const combined   = d.sect3Hours + d.targetHours;
+        const s3p        = total > 0 ? (combined        / total * 100) : 0;
+        const tgp        = total > 0 ? (d.targetHours   / total * 100) : 0;
+
+        doc.autoTable({
+            startY: y,
+            head: [['Metric','Hours','Rate','Benchmark','Status']],
+            body: [
+                ['Total Employee Hours',                    d.totalHours.toLocaleString(),   '—',                              '—',       '—'],
+                ['Section 3 Worker Hours (non-targeted)',   d.sect3Hours.toLocaleString(),   '—',                              '—',       '—'],
+                ['Section 3 Targeted Hours',                d.targetHours.toLocaleString(),  '—',                              '—',       '—'],
+                ['Combined Section 3 (non-tgt + targeted)', combined.toLocaleString(),       total>0?s3p.toFixed(1)+'%':'—',   'Min 25%', total>0?(s3p>=25?'Compliant':'Non-Compliant'):'—'],
+                ['Targeted Worker Rate',                    d.targetHours.toLocaleString(),  total>0?tgp.toFixed(1)+'%':'—',   'Min 5%',  total>0?(tgp>=5?'Compliant':'Non-Compliant'):'—'],
+            ],
+            foot: [['* Contractor-level rates only. Project compliance is assessed across all contractors combined.','','','','']],
+            theme: 'striped',
+            headStyles: { fillColor: DARK, textColor: 255, fontStyle: 'bold', fontSize: 9 },
+            footStyles: { fillColor: SNOW, textColor: MID, fontStyle: 'italic', fontSize: 7.5 },
+            styles: { fontSize: 9, cellPadding: 4 },
+            columnStyles: { 0:{cellWidth:72}, 1:{halign:'right'}, 2:{halign:'center'}, 3:{halign:'center'}, 4:{halign:'center',fontStyle:'bold'} },
+            didParseCell: data => {
+                if (data.section==='body' && data.column.index===4) {
+                    if (data.cell.raw==='Compliant')     data.cell.styles.textColor = PASS;
+                    if (data.cell.raw==='Non-Compliant') data.cell.styles.textColor = FAIL;
+                }
+                if (data.section==='foot') data.cell.colSpan = 5;
+            }
+        });
+        y = doc.lastAutoTable.finalY + 10;
+
+        // ── Certification ─────────────────────────────────────────────────────
+        newPage(58); y += 4;
+        doc.setFillColor(...DARK); doc.rect(M, y, UW, 9, 'F');
+        doc.setTextColor(255,255,255); doc.setFontSize(10); setBold();
+        doc.text('CERTIFICATION', PW/2, y+6.5, {align:'center'});
+        setDark(); y += 13;
+
+        const certText  = 'I certify that the information contained in this report is true and accurate, and that the efforts documented herein represent a good faith attempt to comply with Section 3 of the Housing and Urban Development Act of 1968 (12 U.S.C. 1701u), as amended, and implementing regulations at 24 CFR Part 75, to the greatest extent feasible.';
+        const certLines = doc.splitTextToSize(certText, UW-10);
+        const certH     = certLines.length * 4.5 + 10;
+
+        doc.setFillColor(...SNOW); doc.setDrawColor(...FROST);
+        doc.rect(M, y, UW, certH, 'FD');
+        doc.setFillColor(...DARK); doc.rect(M, y, 3.5, certH, 'F');
+        doc.setFontSize(8.5); doc.setFont(undefined,'italic'); setDark();
+        doc.text(certLines, M+7, y+6);
+        y += certH + 12;
+
+        // Signature lines
+        const sw = (UW - 8) / 3;
+        [{label:'Certifier Name', val:d.certName}, {label:'Title', val:d.certTitle}, {label:'Date', val:d.certDate}]
+            .forEach((f, i) => {
+                const fx = M + i*(sw+4);
+                doc.setFontSize(7.5); setBold(); doc.setTextColor(...STEEL);
+                doc.text(f.label.toUpperCase(), fx, y);
+                setNormal(); setDark(); doc.setFontSize(10);
+                doc.text(f.val||'', fx, y+6);
+                doc.setDrawColor(...DARK); doc.setLineWidth(0.5);
+                doc.line(fx, y+9, fx+sw, y+9);
+            });
+
+        footer();
+
+        const qStr = d.quarter && d.year ? `${d.quarter}${d.year}` : 'QTR';
+        const cStr = (d.contractor||'Contractor').replace(/\s+/g,'_').replace(/[^A-Za-z0-9_]/g,'');
+        doc.save(`Section3_Effort_${cStr}_${qStr}.pdf`);
+
+    } catch(err) {
+        console.error(err);
         alert('Error generating PDF. Please try again.');
     } finally {
-        button.textContent = originalText;
-        button.classList.remove('export-loading');
-        document.body.removeChild(overlay);
+        document.getElementById('overlay').classList.remove('visible');
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  CSV EXPORT
+// ─────────────────────────────────────────────────────────────────────────────
+function exportCSV() {
+    const d = getData();
+    const esc = v => `"${String(v??'').replace(/"/g,'""')}"`;
+    const rows = [
+        ['SECTION 3 QUARTERLY EFFORT REPORT'],[''],
+        ['Agency', d.agencyName], ['Project Name', d.projectName], ['Project Number', d.projectNum],
+        ['Quarter', `${d.quarter} ${d.year}`], ['Period Start', d.periodStart], ['Period End', d.periodEnd],
+        ['Contractor', d.contractor], ['Address', d.address],
+        ['Contact', d.contact], ['Phone', d.phone], ['Email', d.email],
+        [''],['EFFORT ITEM','CATEGORY','SUPPORTING NOTES'],
+        ...d.checked.map(e => [e.text, CAT_NAMES[e.cat], e.notes]),
+        ['Other Efforts','',d.otherText],
+        [''],['LABOR HOURS SUMMARY'],
+        ['Total Hours', d.totalHours],['Section 3 Hours', d.sect3Hours],['Targeted Hours', d.targetHours],
+        [''],['CERTIFICATION'],
+        ['Certifier Name', d.certName],['Title', d.certTitle],['Date', d.certDate],
+    ];
+    const csv  = rows.map(r => r.map(esc).join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const qStr = d.quarter && d.year ? `${d.quarter}${d.year}` : 'QTR';
+    const cStr = (d.contractor||'Contractor').replace(/\s+/g,'_').replace(/[^A-Za-z0-9_]/g,'');
+    a.href = url; a.download = `Section3_Effort_${cStr}_${qStr}.csv`; a.click();
+    URL.revokeObjectURL(url);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  RESET
+// ─────────────────────────────────────────────────────────────────────────────
+function resetForm() {
+    if (!confirm('Clear all form data?')) return;
+    document.querySelectorAll('input:not([type=hidden]), textarea').forEach(el => {
+        el.type === 'checkbox' ? (el.checked = false) : (el.value = '');
+    });
+    document.getElementById('reportQuarter').value = '';
+    document.querySelectorAll('.q-chip').forEach(c => c.classList.remove('active'));
+    EFFORTS.forEach(e => {
+        document.getElementById(`item-${e.id}`)?.classList.remove('checked');
+        document.getElementById(`nw-${e.id}`)?.classList.remove('open');
+    });
+    refreshCounts();
+    calcHours();
+    document.getElementById('certDate').value = new Date().toISOString().split('T')[0];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    buildEfforts();
+    document.getElementById('certDate').value  = new Date().toISOString().split('T')[0];
+    document.getElementById('reportYear').value = new Date().getFullYear();
+});
 </script>
 </body>
 </html>
